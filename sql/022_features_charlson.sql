@@ -49,6 +49,7 @@ flags as (
   group by hadm_id
 )
 
+-- minimal Charlson-style score
 select
   hadm_id, CHF, RENAL, DM,
   (CHF * 1 + RENAL * 2 + DM * 1) as charlson_min

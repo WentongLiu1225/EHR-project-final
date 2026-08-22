@@ -49,6 +49,7 @@ raw_vitals as (
     and ce.valuenum is not null
 ),
 
+-- temp transformation
 clean_vitals as (
   select
     hadm_id,
@@ -69,6 +70,7 @@ clean_vitals as (
   where vital_type is not null
 ),
 
+-- exclude values that don't make sense
 filtered_vitals as (
   select *
   from clean_vitals

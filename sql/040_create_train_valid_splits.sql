@@ -16,8 +16,7 @@ create or replace view features.split as
 select
   f.*,
   case
-    when p.anchor_year < 2150 then 'train'
-    else 'valid'
+    when p.anchor_year < 2150 then 'train' else 'valid'
   end as split
 from features.inhosp_mortality_features f
 join mimiciv_hosp.patients p
@@ -29,8 +28,7 @@ create or replace view features.split_v2 as
 select
   f2.*,
   case
-    when p.anchor_year < 2150 then 'train'
-    else 'valid'
+    when p.anchor_year < 2150 then 'train' else 'valid'
   end as split
 from features.inhosp_mortality_features_v2 f2
 join mimiciv_hosp.patients p
@@ -42,8 +40,7 @@ create or replace view features.split_v3 as
 select
   f3.*,
   case
-    when p.anchor_year < 2150 then 'train'
-    else 'valid'
+    when p.anchor_year < 2150 then 'train' else 'valid'
   end as split
 from features.inhosp_mortality_features_v3 f3
 join mimiciv_hosp.patients p
@@ -55,8 +52,7 @@ create or replace view features.split_v4 as
 select
   f4.*,
   case
-    when p.anchor_year < 2150 then 'train'
-    else 'valid'
+    when p.anchor_year < 2150 then 'train' else 'valid'
   end as split
 from features.inhosp_mortality_features_v4 f4
 join mimiciv_hosp.patients p

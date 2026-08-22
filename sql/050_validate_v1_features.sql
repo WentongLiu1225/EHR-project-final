@@ -10,8 +10,7 @@
   - features.inhosp_mortality_features
   - features.split
 
-  It checks object existence, row counts, hadm_id uniqueness,
-  outcome values, split distribution, and basic missingness.
+  It checks object existence, row counts, hadm_id uniqueness, outcome values, split distribution, and basic missingness.
 */
 
 
@@ -24,6 +23,7 @@ select
 
 
 -- stop early if any required object is missing
+-- temp sql code
 do $$
 declare
   missing text := '';
@@ -156,8 +156,7 @@ begin
   from (
     select hadm_id
     from features.inhosp_mortality_features
-    group by hadm_id
-    having count(*) > 1
+    group by hadm_id having count(*) > 1
   ) t;
 
   if dup_n > 0 then
@@ -225,6 +224,8 @@ select
   avg((RENAL is null)::int)::numeric(10,4) as renal_null_rate,
   avg((DM    is null)::int)::numeric(10,4) as dm_null_rate
 from features.charlson_flags;
+
+
 
 
 -- confirm split rule lines up with anchor_year

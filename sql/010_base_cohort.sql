@@ -20,7 +20,7 @@ with base as (
       1
     ) as age_at_admit,
 
-    -- kept for reference; not used in main no-demo/no-admin models
+    -- kept for reference; not used in main models
     p.gender,
     a.admission_type,
     a.admission_location,

@@ -13,8 +13,7 @@ with dx as (
   select
     hadm_id,
     case
-      when icd_version = 9 then 'ICD9'
-      else 'ICD10'
+      when icd_version = 9 then 'ICD9' else 'ICD10'
     end as ver,
     icd_code
   from mimiciv_hosp.diagnoses_icd
