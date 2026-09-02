@@ -125,9 +125,7 @@ def best_threshold_by_f1(y_true, p_pred) -> float:
     recall_at_thresholds = recall[1:]
 
     f1 = (
-        2
-        * precision_at_thresholds
-        * recall_at_thresholds
+        2 * precision_at_thresholds * recall_at_thresholds
         / (precision_at_thresholds + recall_at_thresholds + EPS)
     )
 

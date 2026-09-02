@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 
 """
+
 Common XGBoost training utilities for the in-hospital mortality project.
 
-This module handles database connection, split-view loading, feature selection,
-preprocessing, class imbalance adjustment, XGBoost training with early stopping,
-model evaluation, and saving model/metrics artifacts.
+The version-specific XGBoost scripts pass in a SQL split view and feature lists.
+This file loads the data, prepares the selected features, trains an XGBoost
+classifier with early stopping, evaluates AUROC/AUPRC, and saves the model and
+metrics.
+
 """
 
 import json

@@ -17,7 +17,7 @@ OUT_DIR = "artifacts/logit_v5_icu_nodemo"
 LABEL = "y_inhosp_death"
 
 
-CONTINUOUS_FEATURES = [
+NUMERIC_FEATURES = [
     "age_at_admit",
     "charlson_min",
 

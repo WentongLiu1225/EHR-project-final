@@ -4,9 +4,9 @@
 Train the V5 ICU-only XGBoost model.
 
 V5 uses the ICU-only admission-level feature table with one row per hospital
-admission based on the first ICU stay. It includes baseline clinical variables,
-first-24h labs, missingness indicators, early-care intervention flags, chronic
-diagnosis indicators, and ICU vital sign features.
+admission based on the first ICU stay. It includes selected baseline clinical
+features, first-24h labs, missingness indicators, early-care intervention flags,
+chronic diagnosis indicators, and ICU vital-sign features.
 
 This is the no-demographic/no-administrative version used in the core report.
 """

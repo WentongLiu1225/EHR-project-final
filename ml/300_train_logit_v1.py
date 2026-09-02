@@ -18,7 +18,7 @@ OUT_DIR = "artifacts/logit_v1_core"
 LABEL = "y_inhosp_death"
 
 
-CONTINUOUS_FEATURES = [
+NUMERIC_FEATURES = [
     "age_at_admit",
     "sodium_24h_first",
     "potassium_24h_first",

@@ -18,7 +18,7 @@ OUT_DIR = "artifacts/logit_v4_nodemo"
 LABEL = "y_inhosp_death"
 
 
-CONTINUOUS_FEATURES = [
+NUMERIC_FEATURES = [
     # V3 continuous features
     "age_at_admit",
     "sodium_24h_first",

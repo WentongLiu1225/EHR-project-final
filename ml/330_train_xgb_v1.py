@@ -5,7 +5,7 @@ Train the V1 XGBoost model.
 
 V1 uses a small baseline feature set:
 - age at admission
-- first-within-24h core labs
+- first available core labs within 24 hours of admission
 - minimal Charlson-style comorbidity summary
 
 This is the no-demographic/no-administrative version used in the core report.

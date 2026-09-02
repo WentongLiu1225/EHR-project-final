@@ -3,9 +3,9 @@
 """
 Inspect coefficients from a trained logistic regression pipeline.
 
-This script loads a saved sklearn pipeline, reconstructs transformed feature names,
-calculates coefficients and odds ratios, saves them to CSV, and prints the top
-features ranked by absolute coefficient size.
+This script loads a saved model, rebuilds the feature names after preprocessing,
+saves the coefficients and odds ratios to CSV, and prints the largest
+coefficients by absolute value.
 """
 
 import argparse

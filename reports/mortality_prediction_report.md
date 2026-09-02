@@ -1,5 +1,4 @@
 ## Modeling Roadmap: From Feature Expansion to Care-Setting-Specific Models
-## Feature Engineering Roadmap and Care-Setting Extensions
 
 ### Stage 1 — Core hospital-wide baseline
 
@@ -8,20 +7,20 @@ Stage 1 was the starting point of the project. I used it as a simple hospital-wi
 In this stage, I only used a small set of early clinical variables:
 
 - **Clinical context:** `age_at_admit`
-- **Early labs:** first lab values within 24 hours after admission: `sodium_24h_first`, `potassium_24h_first`, `creatinine_24h_first`, `lactate_24h_first`
+- **Early labs:** first available lab values within 24 hours after admission: `sodium_24h_first`, `potassium_24h_first`, `creatinine_24h_first`, `lactate_24h_first`
 - **Comorbidity summary:** `charlson_min`
 - **Label:** `y_inhosp_death`
 - **Split:** time-based split using `features.split`
 - **Feature view:** `features.inhosp_mortality_features`
 
-I intentionally left out demographic and administrative variables, including `gender`, `insurance`, `admission_type`, `admission_location`, `race`, and `language`. The goal was to keep the first model focused on basic first-24h clinical signal, instead of letting workflow or demographic variables drive the baseline.
+I intentionally left out demographic and administrative variables, including `gender`, `insurance`, `admission_type`, `admission_location`, `race`, and `language`. The goal was to keep the first model focused on basic first-24h clinical signal, instead of relying on demographic or workflow-related variables.
 
-On the validation set, Stage 1 included 291,856 admissions, with an in-hospital mortality prevalence of about 2.1%. The logistic regression model reached an AUROC of **0.778** and an AUPRC of **0.162**. The XGBoost model performed better, with an AUROC of **0.842** and an AUPRC of **0.211**.
+In the validation set, Stage 1 included 291,856 admissions, with an in-hospital mortality prevalence of about 2.1%. The logistic regression model reached an AUROC of **0.778** and an AUPRC of **0.162**. The XGBoost model performed better, with an AUROC of **0.842** and an AUPRC of **0.211**.
 
 
 ### Stage 2 — Extended first-24h labs and lab missingness
 
-Stage 2 kept the same basic structure as Stage 1, but expanded the lab information available in the first 24 hours. In addition to age, the four core labs, and `charlson_min`, I added a broader chemistry/CBC panel and created missingness indicators for each lab.
+Stage 2 kept the same basic structure as Stage 1, but expanded the lab information available in the first 24 hours. In addition to age, the four core labs, and `charlson_min`, I added a broader chemistry and CBC panel and created missingness indicators for each lab.
 
 The added lab values included:
 
@@ -36,19 +35,19 @@ The added lab values included:
 - `hemoglobin_24h_first`
 - `platelets_24h_first`
 
-For each lab in the V2 panel, I also added a binary missingness flag, where 1 means the lab was not available within the first 24 hours. This was useful because whether a lab was ordered can carry information about early clinical concern, not just the lab value itself.
+For each lab in the V2 panel, I also added a binary missingness flag, where 1 means the lab was not available within the first 24 hours. I included these flags because whether a lab was ordered can carry information about early clinical concern, not just the lab value itself.
 
 As in Stage 1, I did not include demographic or administrative variables such as `gender`, `insurance`, `admission_type`, `admission_location`, `race`, or `language`. I used the same rule for the later stages, so I will not repeat this point for every version below.
 
 The feature view for this stage was `features.inhosp_mortality_features_v2`, and the time-based split was stored in `features.split_v2`.
 
-On the validation set, Stage 2 again included 291,856 admissions, with an in-hospital mortality prevalence of about 2.1%. The logistic regression model improved to an AUROC of **0.858** and an AUPRC of **0.186**. The XGBoost model reached an AUROC of **0.879** and an AUPRC of **0.254**.
+In the validation set, Stage 2 again included 291,856 admissions, with an in-hospital mortality prevalence of about 2.1%. The logistic regression model improved to an AUROC of **0.858** and an AUPRC of **0.186**. The XGBoost model reached an AUROC of **0.879** and an AUPRC of **0.254**.
 
 ### Stage 3 — Early-care signals and chronic disease burden
 
 Stage 3 kept the Stage 2 lab panel and missingness flags, then added two types of information that could better reflect patient severity: early-care intensity and chronic disease burden.
 
-The new early-care features included medication group flags within the first 24 hours:
+The new early-care features included medication group flags based on prescriptions started within the first 24 hours:
 
 - `vasopressor_24h`
 - `antibiotic_24h`
@@ -57,7 +56,7 @@ The new early-care features included medication group flags within the first 24 
 - `anticoag_antiplatelet_24h`
 - `sedative_analgesic_24h`
 
-I also added ICU-related procedure flags within the first 24 hours:
+I also added ICU-recorded procedure flags within the first 24 hours:
 
 - `airway_intubation_24h`
 - `central_line_24h`
@@ -76,13 +75,13 @@ Finally, I added several chronic diagnosis group indicators:
 
 The feature view for this stage was `features.inhosp_mortality_features_v3`, and the time-based split was stored in `features.split_v3`.
 
-The goal of this stage was to keep the same first-24h window, but add information that may capture early treatment intensity and baseline disease burden. This helped move the model beyond labs alone, while still avoiding variables that would only be known later in the admission.
+The goal of this stage was to keep the same first-24h window, but add information that could reflect early treatment intensity and baseline disease burden. This helped move the model beyond labs alone, while still avoiding variables that would only be known later in the admission.
 
-On the validation set, Stage 3 included 291,856 admissions, with an in-hospital mortality prevalence of about 2.1%. The logistic regression model improved to an AUROC of **0.894** and an AUPRC of **0.244**. The XGBoost model reached an AUROC of **0.903** and an AUPRC of **0.302**.
+In the validation set, Stage 3 included 291,856 admissions, with an in-hospital mortality prevalence of about 2.1%. The logistic regression model improved to an AUROC of **0.894** and an AUPRC of **0.244**. The XGBoost model reached an AUROC of **0.903** and an AUPRC of **0.302**.
 
 ### Stage 4 — Hospital-wide vitals feasibility check
 
-After Stage 3, I tested whether adding vital-sign summaries could further improve the hospital-wide model. Vitals are clinically important for mortality prediction, so I created first/min/max summaries for six vital signs within the first 24 hours:
+After Stage 3, I tested whether adding vital-sign summaries could further improve the hospital-wide model. These vital signs were derived from ICU chart events, so I treated this step partly as a coverage check. Because vital signs are closely related to patient acuity, I created first/min/max summaries for six vital signs within the first 24 hours after hospital admission:
 
 - Heart rate: `hr_24h_first`, `hr_24h_min`, `hr_24h_max`
 - Respiratory rate: `rr_24h_first`, `rr_24h_min`, `rr_24h_max`
@@ -95,9 +94,9 @@ I also added missingness flags for each vital-sign group.
 
 The feature view for this stage was `features.inhosp_mortality_features_v4`, and the time-based split was stored in `features.split_v4`.
 
-On the validation set, Stage 4 included 291,856 admissions, with an in-hospital mortality prevalence of about 2.1%. The logistic regression model reached an AUROC of **0.907** and an AUPRC of **0.287**. The XGBoost model reached an AUROC of **0.926** and an AUPRC of **0.385**.
+In the validation set, Stage 4 included 291,856 admissions, with an in-hospital mortality prevalence of about 2.1%. The logistic regression model reached an AUROC of **0.907** and an AUPRC of **0.287**. The XGBoost model reached an AUROC of **0.926** and an AUPRC of **0.385**.
 
-Although Stage 4 improved performance, the coverage check showed an important limitation. In the full hospital-wide cohort, only **12.5%** of admissions had any of these vital-sign features available, and **87.5%** had all vital signs missing. When I split the cohort by ICU status, the issue became clearer: ICU admissions had much better vital coverage, while non-ICU admissions had these ICU-derived vitals missing for essentially all patients.
+Although Stage 4 improved performance, the coverage check showed an important limitation. In the full hospital-wide cohort, only **12.5%** of admissions had any of these vital-sign features available, and **87.5%** had all vital signs missing. When I split the cohort by ICU status, the issue became clearer: ICU admissions had much better vital coverage, while non-ICU admissions had these ICU-derived vitals missing for almost all patients.
 
 Because of that, I treated Stage 4 as a feasibility check rather than the final hospital-wide model. It showed that vitals were useful, but also that they should not be added blindly to the full cohort. This led to the next step: separating the problem into ICU and non-ICU models.
 
@@ -105,17 +104,17 @@ Because of that, I treated Stage 4 as a feasibility check rather than the final 
 
 Stage 5 focused only on ICU admissions. The goal was to use vital-sign information in the setting where it was actually available and clinically meaningful.
 
-One issue I found during data checking was that some hospital admissions had more than one ICU stay. To keep the unit of analysis consistent with the rest of the project, I kept the model at the hospital-admission level. For admissions with multiple ICU stays, I selected the first ICU stay and used vital signs from the first 24 hours after that ICU stay started.
+One issue I found during data checking was that some hospital admissions had more than one ICU stay. To keep the unit of analysis consistent with the rest of the project, I kept the model at the hospital-admission level. For admissions with multiple ICU stays, I selected the first ICU stay and summarized vital signs from the first 24 hours after that ICU stay started.
 
 This means Stage 5 is still one row per `hadm_id`, but the ICU vital-sign features come from the first ICU stay during that admission.
 
 The Stage 5 feature set included:
 
-- Stage 3 clinical features
-- first/min/max ICU vital-sign summaries
-- vital-sign missingness indicators
-- early medication and procedure flags
+- age, first-24h labs and lab missingness indicators
+- selected early medication and procedure flags
 - chronic diagnosis group indicators
+- first/min/max ICU vital-sign summaries
+- vital-sign missingness indicator
 
 The feature table was `features.inhosp_mortality_features_v5_icu`, and the split table was `features.split_v5_icu`.
 
@@ -127,9 +126,9 @@ This stage is important because it uses the vital-sign features in the populatio
 
 ### Stage 6 — Non-ICU admission-level model
 
-Stage 6 was built as the non-ICU counterpart to the ICU-only model. I added this stage because the Stage 4 coverage check showed that ICU-derived vital signs were not available for non-ICU admissions.
+Stage 6 was built as the non-ICU version of the care-setting-specific model. I added this stage because the Stage 4 coverage check showed that ICU-derived vital signs were not available for non-ICU admissions.
 
-For this stage, I excluded admissions with any ICU stay and kept the unit of analysis at the hospital-admission level, with one row per `hadm_id`. The feature set stayed close to Stage 3: first-24h labs, lab missingness flags, early medication signals, and chronic diagnosis group indicators. I did not include ICU vital-sign features in this model.
+For this stage, I excluded admissions with any ICU stay and kept the unit of analysis at the hospital-admission level, with one row per `hadm_id`. The feature set stayed close to Stage 3: first-24h labs, lab missingness flags, selected early medication/procedure indicators, and chronic diagnosis group indicators. I did not include ICU vital-sign features in this model.
 
 The feature table was `features.inhosp_mortality_features_v6_nonicu`, and the split table was `features.split_v6_nonicu`.
 
@@ -141,7 +140,7 @@ The AUPRC is much lower than in the ICU-only model, but this is expected because
 
 ### Summary of the roadmap
 
-Overall, the project started with a hospital-wide first-24h baseline and gradually added more clinical information. Stages 1–3 show the effect of expanding labs, missingness indicators, early-care signals, and chronic diagnosis groups. Stage 4 tested whether vital signs could be added to the hospital-wide model, but the coverage check showed that ICU-derived vitals were mostly unavailable outside the ICU. Based on that finding, I split the later work into two care-setting-specific models: an ICU-only model with vital signs and a non-ICU model without ICU-only vital features.
+Overall, the project started with a hospital-wide first-24h baseline and gradually added more clinical information. Stages 1–3 show how performance changed after adding broader labs, missingness indicators, early-care signals, and chronic diagnosis groups. Stage 4 tested whether vital signs could improve the hospital-wide model, but the coverage check showed that these ICU-derived vital signs were mostly unavailable outside the ICU. Based on that finding, I split the later work into two care-setting-specific models: an ICU-only model that used vital signs from the first ICU stay, and a non-ICU model that did not include ICU-derived vital-sign features.
 
 ---
 
@@ -149,11 +148,11 @@ Overall, the project started with a hospital-wide first-24h baseline and gradual
 
 > **TL;DR**  
 > **Objective:** Predict in-hospital mortality using information available at admission or early in the hospital/ICU course, with a focus on avoiding leakage from later hospitalization events.  
-> **Data source:** PostgreSQL `${PGDATABASE}` (current runs: **mimic**). Cohorts and predictors are built as versioned feature views under the `features` schema.
+> **Data source:** MIMIC-IV loaded in a local PostgreSQL database. In my current runs, the database name is mimic. Cohorts and predictors are built as versioned feature views under the features schema.
 >
-> **Main idea:** I first built a hospital-wide model in stages, starting from a small first-24h clinical baseline and then adding expanded labs, missingness flags, early-care signals, and chronic diagnosis groups. I then tested whether vital signs could be added to the full hospital-wide cohort. That V4 check showed that ICU-derived vitals were useful but not evenly available across all admissions, so I split the later work into two care-setting-specific models: an ICU-only model using first ICU stay vitals, and a non-ICU model without ICU vital features.
+> **Main idea:** I first built a hospital-wide model in stages, starting from a small first-24h clinical baseline and then adding expanded labs, missingness flags, early-care signals, and chronic diagnosis groups. I then tested whether vital signs could be added to the full hospital-wide cohort. That V4 check shows that ICU-derived vitals were useful but not evenly available across all admissions, so I split the later work into two care-setting-specific models: an ICU-only model using vital signs from the first ICU stay, and a non-ICU model without ICU-derived vital-sign features.
 >
-> **Key findings:** XGBoost generally outperformed logistic regression across model versions. The hospital-wide V4 model had the strongest overall hospital-wide performance, but I treated it as a feasibility check because vital-sign coverage was highly uneven. The final care-setting-specific models were more interpretable from a data-availability standpoint: V5 focused on ICU admissions with dense vital-sign monitoring, while V6 focused on non-ICU admissions where ICU vitals were structurally unavailable.
+> **Key findings:** XGBoost generally outperformed logistic regression across model versions. The hospital-wide V4 model had the strongest overall hospital-wide performance, but I treated it as a feasibility check because vital-sign coverage was highly uneven. The final care-setting-specific models made more sense from a data-availability standpoint: V5 focused on ICU admissions with dense vital-sign monitoring, while V6 focused on non-ICU admissions where ICU-derived vitals were not available for almost all admissions.
 
 
 ---
@@ -218,9 +217,9 @@ For V5, I reused the V4 split assignment at the `hadm_id` level after converting
 
 ### Data checks before modeling
 
-Before training each model, I ran a set of basic data checks, including but not limited to the following:
+Before and during model building, I ran a set of basic data checks, including the following:
 
-- The feature table and the split table had the same number of rows.
+- I checked that the feature table and split table matched at the admission level.
 - `hadm_id` was unique in each admission-level modeling table.
 - For V5, I confirmed that the ICU feature table was no longer ICU-stay-level. After selecting the first ICU stay per admission, `features.inhosp_mortality_features_v5_icu` had one row per `hadm_id`.
 - For V6, I confirmed that the cohort excluded ICU admissions and remained one row per `hadm_id`.
@@ -239,28 +238,28 @@ This section summarizes the main feature types and naming conventions used acros
 The core feature set starts with a small number of early clinical variables:
 
 - `age_at_admit`
-- `charlson_min`
+- `charlson_min`, a minimal Charlson-style comorbidity score
 - selected first-24h lab values
 
-Lab values use the naming pattern `*_24h_first`, which means the first available value within the first 24 hours after admission. For example, `creatinine_24h_first` is the first creatinine value measured during that window.
+Lab values use the naming pattern `*_24h_first`, which means the first available value within the first 24 hours after admission. For example, `creatinine_24h_first` is the first creatinine value measured within the first 24 hours.
 
 ### 2.2 Lab values and missingness flags
 
 From Stage 2 onward, I used a broader first-24h lab panel, including chemistry and CBC variables such as BUN, bicarbonate, WBC, hemoglobin, and platelets.
 
-For each lab, I also created a missingness flag using the pattern `*_24h_missing`, where 1 means the lab was not available within the first 24 hours. These flags are useful because missingness is not always random in EHR data. Whether a lab was ordered can reflect early clinical concern, workflow, or patient acuity.
+For each lab, I also created a missingness flag using the pattern `*_24h_missing`, where 1 means the lab was not available within the first 24 hours. I included these flags because missingness is not always random in EHR data. Whether a lab was ordered can reflect early clinical concern, workflow, or patient acuity.
 
 ### 2.3 Early-care and chronic disease features
 
 Stage 3 added early-care signals and chronic diagnosis group indicators.
 
-The early-care features include grouped medication flags such as `vasopressor_24h`, `antibiotic_24h`, and `sedative_analgesic_24h`, as well as procedure flags such as `airway_intubation_24h`, `central_line_24h`, `dialysis_24h`, and `chest_tube_24h`.
+The early-care features include grouped medication flags based on prescriptions started within the first 24 hours such as `vasopressor_24h`, `antibiotic_24h`, and `sedative_analgesic_24h`, as well as procedure flags such as `airway_intubation_24h`, `central_line_24h`, `dialysis_24h`, and `chest_tube_24h`.
 
 The chronic disease features are ICD-derived diagnosis group indicators, including `copd`, `chronic_liver`, `malignancy`, `cerebrovascular`, `hypertension`, and `cad`.
 
 ### 2.4 Vital-sign features
 
-Stage 4 tested whether vital-sign summaries could be added to the hospital-wide model. These features used the same first-24h idea and included first, minimum, and maximum values for heart rate, respiratory rate, systolic and diastolic blood pressure, oxygen saturation, and temperature.
+Stage 4 tested whether vital-sign summaries could be added to the hospital-wide model. These vital signs were derived from ICU chart events, so I treated this stage as a feasibility check. These features used the same first-24h idea and included first, minimum, and maximum values for heart rate, respiratory rate, systolic and diastolic blood pressure, oxygen saturation, and temperature.
 
 The vital-sign feature names follow the same pattern:
 
@@ -275,34 +274,22 @@ Data checks showed that these vital-sign features were mainly available for ICU 
 
 ### 2.5 Care-setting-specific feature use
 
-For the ICU-only model, I kept the unit of analysis at the hospital-admission level but selected the first ICU stay for each admission. The ICU model used Stage 3 features plus ICU vital-sign summaries from the first 24 hours after ICU `intime`.
+For the ICU-only model, I kept the unit of analysis at the hospital-admission level but selected the first ICU stay for each admission. The ICU model used selected Stage 3 features plus ICU vital-sign summaries from the first 24 hours after ICU `intime`.
 
 For the non-ICU model, I excluded admissions with any ICU stay and did not include ICU vital-sign features. This kept the non-ICU model aligned with the type of data available in that setting.
-
-### 2.6 Implementation note
-
-The datasets were stored as versioned feature views or tables under the `features` schema:
-
-- `features.inhosp_mortality_features` for V1
-- `features.inhosp_mortality_features_v2` for V2
-- `features.inhosp_mortality_features_v3` for V3
-- `features.inhosp_mortality_features_v4` for V4
-- `features.inhosp_mortality_features_v5_icu` for V5
-- `features.inhosp_mortality_features_v6_nonicu` for V6
-
 
 
 ---
 
 ## 3. Models & Training
 
-I trained each model version using a reproducible pipeline. Each training script reads from the matching split table, applies the preprocessing steps, fits the model, evaluates it on the validation set, and saves the model artifacts under `artifacts/`.
+I trained each model using the same general training workflow. Each training script reads from the matching split table, applies the preprocessing steps, fits the model, evaluates it on the validation set, and saves the model artifacts under `artifacts/`.
 
 The overall workflow is:
 
 `feature table → split table → preprocessing → model training → validation metrics → scenario evaluation → SHAP / error analysis`
 
-This structure made it easier to rerun a specific model version, compare results across versions, and check which features were actually used in each run.
+This structure made it easier to rerun a specific model, compare results across versions and check which features were actually used in each run.
 
 ### 3.1 Logistic Regression
 
@@ -311,7 +298,8 @@ I used logistic regression as the linear baseline model.
 - **Model:** `sklearn.linear_model.LogisticRegression`
 - **Class imbalance:** handled with `class_weight="balanced"`
 - **Numeric preprocessing:** median imputation + standardization
-- **Categorical preprocessing:** most-frequent imputation + one-hot encoding, if categorical variables were used
+- **Categorical preprocessing:** supported in the pipeline with most-frequent imputation and one-hot encoding, although the main no-demographic runs did not use categorical variables
+- **Binary preprocessing:** missing values filled with 0
 - **Outputs:** saved model and metrics under `artifacts/logit_*`
 
 ### 3.2 XGBoost
@@ -323,13 +311,13 @@ I used XGBoost as the non-linear model because it can capture interactions and n
 - **Numeric preprocessing:** median imputation
 - **Categorical preprocessing:** most-frequent imputation + one-hot encoding, if categorical variables were used
 - **Class imbalance:** `scale_pos_weight = #negative / #positive`, computed from the training split
-- **Early stopping:** validation split used to select the best iteration
+- **Early stopping:** the validation split was used for early stopping during XGBoost training
 - **Main hyperparameters:** `n_estimators=5000`, `max_depth=4`, `learning_rate=0.05`, `subsample=0.8`, `colsample_bytree=0.8`, `early_stopping_rounds=50`
 - **Outputs:** saved model and metrics under `artifacts/xgb_*`
 
 ### 3.3 Evaluation
 
-I used the same evaluation approach across model versions.
+I used the same evaluation approach across models.
 
 First, I reported overall validation performance using AUROC and AUPRC. AUPRC was especially important because the outcome was rare in the hospital-wide and non-ICU cohorts.
 
@@ -365,14 +353,14 @@ The main metrics were **AUROC** and **AUPRC**. I used AUPRC as an important metr
 I also looked at two types of threshold scenarios:
 
 - **Fixed recall:** 0.40, 0.50, and 0.60  
-  In this setting, I held sensitivity roughly constant and compared PPV and the number of alerts generated by each model.
+  In this setting, I chose the threshold needed to reach each recall target, then compared PPV and the number of alerts generated by each model.
 
 - **Fixed workload:** Top-1000 and Top-3000 highest-risk admissions  
   In this setting, I held the alert budget constant and compared PPV and recall.
 
 For each scenario, I reported the threshold, PPV, recall, specificity, F1 score, total alerts, and the confusion matrix counts: TN, FP, FN, and TP.
 
-I also reported the best-F1 threshold as a reference point. I did not treat this as the final deployment threshold, but it gives a consistent way to compare model performance across versions.
+I also reported the best-F1 threshold as a reference point. I did not treat this as the final threshold, but it gives a consistent way to compare model performance across versions.
 
 
 
@@ -403,7 +391,7 @@ However, I do not treat V4 as the final hospital-wide model. The coverage check 
 
 ### 5.2 Care-setting-specific validation performance
 
-I then evaluated the care-setting-specific models. V5 focuses on ICU admissions and uses ICU vital-sign summaries from the first ICU stay. V6 focuses on non-ICU admissions and does not include ICU vital-sign features.
+I then evaluated the care-setting-specific models. V5 focuses on hospital admissions with at least one ICU stay and uses ICU vital-sign summaries from the first ICU stay. V6 focuses on non-ICU admissions and does not include ICU vital-sign features.
 
 | Model | Feature set | Cohort   | Valid N | Valid prevalence | AUROC | AUPRC |
 |:------|:------------|:---------|--------:|-----------------:|------:|------:|
@@ -414,7 +402,6 @@ I then evaluated the care-setting-specific models. V5 focuses on ICU admissions 
 
 The ICU-only model had a much higher outcome prevalence than the non-ICU model, so I interpret V5 and V6 separately rather than as a direct head-to-head comparison. In the ICU cohort, XGBoost performed better than logistic regression, with an AUPRC of **0.535**. This suggests that the model was better at ranking ICU patients by mortality risk, especially because ICU patients had more vital-sign information available. In the non-ICU cohort, the AUPRC was much lower, but this is expected because the outcome prevalence was only about **0.5%**.
 
-
 ### 5.3 Operational threshold scenarios
 
 In addition to AUROC and AUPRC, I also compared the models under threshold-based scenarios. This helps translate model scores into a more practical question: if the model is used to flag high-risk admissions, how many alerts would it generate and how many of those alerts would be true events?
@@ -423,8 +410,10 @@ The scenario outputs were generated by `ml/320_eval_scenarios.py`. For each mode
 
 I focused on two types of scenarios:
 
-- **Fixed recall:** keep sensitivity at the same level and compare PPV and number of alerts.
+- **Fixed recall:** choose the threshold needed to reach a target recall, then compare PPV and number of alerts.
 - **Fixed workload:** keep the number of alerts fixed and compare PPV and recall.
+
+In the main report, I show the fixed-recall 0.50 and Top-1000 results as representative examples. The other scenario outputs were kept in the saved evaluation files.
 
 #### Fixed recall = 0.50: hospital-wide models
 
@@ -488,14 +477,16 @@ For logistic regression, Top-K performance was not strictly monotonic. For examp
 
 In the ICU cohort, the Top-1000 XGBoost alerts had a PPV of **0.841**, meaning most of the top-ranked ICU admissions were true in-hospital deaths. In the non-ICU cohort, the Top-1000 PPV was much lower, but this is expected because the event rate was only about 0.5%.
 
+Again, I interpret these results within each care setting because the baseline event rates are very different.
+
 
 ### 5.4 Explainability
 
 I used model explainability mainly as a sanity check. The goal was not to make causal claims, but to check whether the models were relying on reasonable early clinical signals.
 
-For logistic regression, I reviewed the largest coefficients from `coeffs_latest.csv`. Since most predictors in the core runs are standardized labs, missingness flags, and binary treatment/procedure indicators, the coefficients give a rough directional readout. A positive coefficient means the feature pushes the prediction toward higher risk, while a negative coefficient means it pushes the prediction toward lower risk.
+For logistic regression, I reviewed the largest coefficients from `coeffs_latest.csv`. Since the continuous lab variables were standardized and the missingness/treatment/procedure features were binary indicators, the coefficients gave me a rough directional readout. A positive coefficient means the feature pushes the prediction toward higher risk, while a negative coefficient means it pushes the prediction toward lower risk.
 
-One thing I paid special attention to was lab missingness. Some missingness flags had strong effects, and the direction was not always intuitive. This makes sense in EHR data because missingness is often related to clinical workflow. For example, if a lab was not ordered in the first 24 hours, that can sometimes suggest the patient appeared less sick early on, rather than the value being missing at random.
+One thing I paid special attention to was lab missingness. Some missingness flags had strong effects, and the direction was not always intuitive. This makes sense in EHR data because missingness is often related to clinical workflow. For example, if a lab was not ordered in the first 24 hours, that can sometimes suggest the patient appeared less sick early on, rather than the value simply being missing at random.
 
 For XGBoost, I used SHAP values to review global feature importance. I summarized each model using mean absolute SHAP values and saved the outputs under the corresponding `artifacts/xgb_*/shap/` directory:
 
@@ -507,7 +498,7 @@ For XGBoost, I used SHAP values to review global feature importance. I summarize
 
 The SHAP rankings supported the feature roadmap from V1 to V3.
 
-In V1, the model mainly used basic early physiology and age. The top features included `lactate_24h_first`, `age_at_admit`, `creatinine_24h_first`, `sodium_24h_first`, `potassium_24h_first`, and `charlson_min`.
+In V1, the model mainly used age and the small set of early lab/comorbidity features. The top features included `lactate_24h_first`, `age_at_admit`, `creatinine_24h_first`, `sodium_24h_first`, `potassium_24h_first`, and `charlson_min`.
 
 In V2, missingness became an important signal after I added broader labs and missingness flags. Top features included `age_at_admit`, `lactate_24h_missing`, `wbc_24h_first`, `bun_24h_first`, `lactate_24h_first`, and `platelets_24h_first`. This supported the idea that lab availability itself carries information in EHR data.
 
@@ -535,7 +526,7 @@ This made sense for the ICU model. Compared with the hospital-wide V3 model, the
 
 #### Non-ICU model: V6
 
-For the non-ICU XGBoost model, the top features looked different. Since ICU vital signs were not available in this cohort, the model relied more on age, chronic disease burden, labs, lab missingness, and early medication signals.
+For the non-ICU XGBoost model, the top features looked different. Since ICU vital signs were not available in this cohort, the model relied more on age, chronic disease burden, labs, lab missingness, and early-care signals.
 
 The most important features included:
 
@@ -562,7 +553,7 @@ Overall, the explainability checks matched the modeling roadmap. V1 was driven m
 
 ## 6. Error Analysis
 
-This section summarizes the error analysis completed so far and the remaining follow-up checks. I focused the detailed error analysis on the XGBoost models, because XGBoost was the stronger model family across the main comparisons. Logistic regression was used mainly as a linear baseline and was reviewed through coefficient inspection.
+This section summarizes the error analysis included in this report and briefly notes the follow-up checks I would run next. I focused the detailed error analysis on the XGBoost models because XGBoost was the stronger model family across the main comparisons. Logistic regression was used mainly as a linear baseline and was reviewed through coefficient inspection.
 
 The error groups were assigned using the reference threshold of 0.5:
 
@@ -571,7 +562,7 @@ The error groups were assigned using the reference threshold of 0.5:
 - **FN:** predicted survival but died
 - **TN:** predicted survival and survived
 
-This threshold is used here as a consistent reference point for error review. For potential alerting use, I rely more on the fixed-recall and Top-K scenarios described in §5.3.
+This threshold is used here as a consistent reference point for error review. For potential alerting use, I rely more on the fixed-recall and Top-K scenarios described in Section 5.3.
 
 ### 6.1 Current error-analysis outputs
 
@@ -615,31 +606,29 @@ One important pattern is that false negatives still had higher chronic disease b
 
 ### 6.4 Remaining follow-up analyses
 
-The current error analysis provides a practical summary of the main failure patterns for the final V5 and V6 XGBoost models. In this report, I focus on comparing false positives, false negatives, true positives, and true negatives using the available validation outputs.
+The current error analysis provides a practical summary of the main failure patterns for the final V5 and V6 XGBoost models. In this report, I focus on comparing false positives, false negatives, true positives and true negatives using the available validation outputs.
 
-More detailed case-level review is left as future work. This would include manually reviewing high-score false positives to distinguish clinically reasonable high-risk survivors from possible systematic artifacts, and reviewing false negatives to understand whether missed deaths were related to limited early data, weaker first-24h signals, chronic disease burden, or later hospital events.
+More detailed case-level review is left as future work. This would include manually reviewing high-score false positives to distinguish clinically reasonable high-risk survivors from possible systematic artifacts and reviewing false negatives to understand whether missed deaths were related to limited early data, weaker first-24h signals, chronic disease burden, or later hospital events.
 
 Temporal stability is also left for future work. A next step would be to slice performance by `anchor_year` and compare prevalence, AUROC, AUPRC, score distributions, and PPV under fixed alert budgets over time. These checks are beyond the scope of the current report, but they would be important before considering real-world use.
 ---
 
 ## 7. Conclusion
 
-In this project, I built an early in-hospital mortality prediction pipeline using MIMIC-IV data. The main idea was to predict mortality using information available at admission or within the first 24 hours, while trying to avoid using information that would only become available later in the hospitalization.
+In this project, I built an early in-hospital mortality prediction pipeline using MIMIC-IV data. The goal was to use information available early in the hospital or ICU course while avoiding variables that would only become available later in the hospitalization.
 
-I started with a simple baseline model and then expanded the feature set step by step. From V1 to V3, the model performance improved as I added more early clinical information, including a broader lab panel, lab missingness indicators, early medication and procedure signals, and chronic disease indicators. This showed that the additional first-24h features were useful and that the model was gaining signal from clinically meaningful information rather than from later events.
+I started with a simple hospital-wide baseline and expanded the feature set step by step. From V1 to V3, performance improved after adding broader labs, lab missingness indicators, early medication/procedure signals and chronic disease indicators. This suggested that the added early clinical features provided useful signal.
 
-Across most model versions, XGBoost performed better than logistic regression. This was expected to some extent because XGBoost can capture non-linear patterns and interactions between features. Logistic regression was still useful as a baseline because it gave me a simpler model to compare against and helped show that the performance gains were not only coming from one modeling approach.
+Across most versions, XGBoost performed better than logistic regression. Logistic regression was still useful as a baseline because it provided a simpler comparison model, while XGBoost captured more non-linear patterns and interactions.
 
-One important turning point in the project was V4. Adding vital-sign summaries improved the hospital-wide model performance, but the data coverage check showed that these ICU-derived vital signs were not evenly available across all admissions. Most non-ICU admissions had these vital-sign features missing. Because of that, I did not treat V4 as the final hospital-wide model. Instead, I used it as a feasibility check that showed vital signs were useful, but only in the care setting where they were actually available.
+A key finding came from V4. Adding ICU-derived vital-sign summaries improved hospital-wide performance, but the coverage check showed that these features were mostly available for admissions with ICU stays and were missing for most non-ICU admissions. Because of that, I treated V4 as a feasibility check rather than the final hospital-wide model.
 
-This led to the final care-setting-specific modeling approach. For ICU admissions, I built a V5 ICU-only model using vital signs from the first ICU stay while still keeping the unit of analysis at the hospital-admission level. For non-ICU admissions, I built a V6 model that excluded ICU admissions and did not use ICU-derived vital features. This made the final modeling structure more reasonable because each model used features that matched the data available in that care setting.
+This led to the final care-setting-specific approach. For V5, I kept one row per hospital admission but used vital signs from the first ICU stay. For V6, I excluded admissions with any ICU stay and did not include ICU-derived vital-sign features. This made the final model structure more reasonable because each model used features that matched the data available in that care setting.
 
-The ICU and non-ICU models should not be interpreted as a direct head-to-head comparison. The ICU cohort had a much higher mortality rate and more complete vital-sign information, while the non-ICU cohort had a much lower mortality rate. Because of this, the ICU model had much stronger AUPRC and PPV, while the non-ICU model had lower precision-based performance. This difference was expected and mainly reflects the different baseline risk and data availability in the two cohorts.
+I interpret the ICU and non-ICU models separately because the two cohorts have very different baseline mortality rates and data availability. The ICU model had higher AUPRC and PPV, while the non-ICU model had lower precision-based performance, which was expected given the much rarer outcome.
 
-In addition to AUROC and AUPRC, I also evaluated the models using fixed-recall and fixed-alert-budget scenarios. I found these results helpful because they made the model performance easier to interpret in a practical way. Instead of only asking whether the model had a high AUROC, the scenario analysis helped answer questions like how many alerts would be generated, how many would be true positives, and how alert efficiency changed as the feature set improved.
+Beyond AUROC and AUPRC, I also used fixed-recall and fixed-alert-budget scenarios to understand alert efficiency. The explainability and error-analysis results supported the overall direction of the project: the models relied on reasonable early clinical signals, and many false positives looked like clinically high-risk admissions that survived.
 
-The explainability results also supported the overall direction of the project. SHAP rankings and coefficient checks showed that the models were using reasonable clinical signals, such as age, abnormal labs, lab missingness, early treatment intensity, chronic disease burden, and ICU vital signs when available. The error analysis gave a similar impression. Many false positives looked like clinically high-risk patients who survived, rather than random low-risk admissions. Many false negatives had weaker or less obvious first-24h signals, suggesting that some deaths are hard to predict using early data alone.
+Overall, this project became a full EHR modeling workflow, including cohort construction, feature engineering, model training, validation, scenario evaluation, explainability, and error analysis. The main conclusion is that early clinical information can support useful mortality risk prediction, but the model design needs to respect care-setting-specific data availability. The ICU and non-ICU models therefore provide a better final framework than a single hospital-wide model relying on unevenly available ICU-derived vital signs.
 
-Overall, this project became more than just a comparison of several models. It turned into a full EHR modeling workflow, including cohort construction, feature engineering, model training, validation, operational evaluation, explainability, and error analysis. The main conclusion is that early clinical information can provide useful mortality risk prediction, but the model design needs to respect care-setting-specific data availability. For this reason, the ICU and non-ICU models provide a better final framework than a single hospital-wide model that relies on unevenly available ICU-derived features.
-
-There are still several follow-up analyses that would make this project stronger. First, I would like to manually review selected high-scoring false positives and false negatives to better understand whether the model errors are clinically reasonable or caused by systematic artifacts. Second, it would be useful to look more closely at subgroups where death may be driven more by chronic disease burden or later hospital events rather than strong early physiologic changes. Finally, I would like to run temporal stability checks by `anchor_year` to see whether model performance, score distributions, and alert efficiency remain stable over time. These steps are outside the scope of the current report, but they would be important before thinking about prospective validation or real-world use.
+Future work would include manual review of selected false positives and false negatives, subgroup review, and temporal stability checks by anchor_year. These steps are outside the scope of the current report but would be important before considering prospective validation or real-world use.

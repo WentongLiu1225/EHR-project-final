@@ -3,8 +3,8 @@
 """
 Train the V4 hospital-wide XGBoost model.
 
-V4 keeps the V3 feature set and adds first/min/max vital-sign summaries
-plus vital-sign missingness flags from the first 24 hours after admission.
+V4 keeps the V3 feature set and adds ICU-derived vital-sign summaries
+and vital-sign missingness flags from the first 24 hours after admission.
 
 This is the no-demographic/no-administrative version used in the core report.
 """

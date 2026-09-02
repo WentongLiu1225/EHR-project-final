@@ -3,9 +3,9 @@
 """
 Common logistic regression training utilities for the in-hospital mortality project.
 
-This module loads feature data from PostgreSQL, attaches train/valid split labels,
+This module loads feature data from SQL, attaches train/valid split labels,
 builds a preprocessing + logistic regression pipeline, evaluates AUROC/AUPRC,
-and saves timestamped model and metric outputs.
+and saves model and metric outputs.
 
 Optional arguments support the V6 non-ICU model, where some columns may be
 entirely missing in the training set.
@@ -21,6 +21,7 @@ import pandas as pd
 from joblib import dump
 from sqlalchemy import create_engine
 
+
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
@@ -28,7 +29,7 @@ from sklearn.metrics import average_precision_score, roc_auc_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-
+# I used environment variables for the database connection, so the GitHub version does not contain local credentials. 
 def make_engine():
     pg_host = os.getenv("PGHOST", "localhost")
     pg_port = os.getenv("PGPORT", "5432")
@@ -42,7 +43,7 @@ def make_engine():
 
 
 def _uniq(seq):
-    """Preserve order while dropping duplicate column names."""
+    """Preserve order while dropping duplicate column names"""
     return list(dict.fromkeys(seq))
 
 
@@ -82,7 +83,8 @@ def build_pipeline(continuous_cols, binary_cols, categorical_cols) -> Pipeline:
         ("bin", bin_pipe, binary_cols),
         ("cat", cat_pipe, categorical_cols),
     ], remainder="drop")
-
+    
+    # Class-weighted logistic regression with extra iterations for convergence, using all CPU cores and a fixed seed for reproducibility.
     clf = LogisticRegression(
         max_iter=4000,
         class_weight="balanced",
@@ -92,12 +94,12 @@ def build_pipeline(continuous_cols, binary_cols, categorical_cols) -> Pipeline:
     )
 
     return Pipeline([
-        ("pre", pre),
-        ("clf", clf),
+        ("pre", pre), ("clf", clf),
     ])
 
 
 def _drop_all_missing_train_cols(train: pd.DataFrame, cols: list[str]) -> tuple[list[str], list[str]]:
+    """Keep cols that exist and have at least one observed value in the traning dataset."""
     kept = []
     dropped = []
 
@@ -116,12 +118,13 @@ def _check_preprocessed_nan(pipe: Pipeline, Xtr: pd.DataFrame, ytr: pd.Series) -
     pre = pipe.named_steps["pre"]
     Xt = pre.fit_transform(Xtr, ytr)
 
-    if hasattr(Xt, "toarray"):
-        Xt_check = Xt.toarray()
+    if hasattr(Xt, "toarray"): # check if it is sparse matrix
+        Xt_check = Xt.toarray() 
     else:
         Xt_check = Xt
 
     if np.isnan(Xt_check).any():
+        # check NAs
         raw_missing = Xtr.isna().mean().sort_values(ascending=False)
         raise ValueError(
             "NaN still present after preprocessing.\n"
@@ -138,7 +141,7 @@ def train_eval_save(
     continuous_candidates: list[str],
     binary_candidates: list[str],
     categorical_candidates: list[str],
-    drop_all_missing_train: bool = False,
+    drop_all_missing_train: bool = False, # design for v6
     check_preprocessed_nan: bool = False,
     save_latest: bool = False,
 ):
@@ -171,7 +174,7 @@ def train_eval_save(
     used_cols = cont_cols + bin_cols + cat_cols
 
     if not used_cols:
-        raise ValueError("No usable feature columns found. Check column names and missingness.")
+        raise ValueError("No usable columns found. Check.")
 
     Xtr = train[used_cols]
     ytr = train[label].astype(int)
@@ -229,3 +232,4 @@ def train_eval_save(
         dump(pipe, out / "model_latest.joblib")
 
     print(json.dumps(metrics, indent=2))
+    
